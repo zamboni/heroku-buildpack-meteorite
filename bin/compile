@@ -54,6 +54,17 @@ function run_npm() {
   fi
 }
 
+function run_local_npm() {
+  command="$1"
+
+  HOME="$BUILD_DIR" $VENDORED_NODE/bin/node $VENDORED_NODE/bin/npm $command 2>&1 | indent
+
+  if [ "${PIPESTATUS[*]}" != "0 0" ]; then
+    echo " !     Failed to $command dependencies with npm"
+    exit 1
+  fi
+}
+
 function manifest_versions() {
   curl "http://${S3_BUCKET}.s3.amazonaws.com/manifest.${1}" -s -o - | tr -s '\n' ' '
 }
@@ -181,6 +192,18 @@ mkdir -p $METEOR_BUILD_DIR/app
 tar -zxf $CACHE_DIR/bundle.tar.gz --strip-components 1 -C $METEOR_BUILD_DIR/app
 rm $CACHE_DIR/bundle.tar.gz
 ############################################
+
+
+############################################
+# install custom npm in .meteor/local/build/server/ in development
+# bundle, and install into app/
+############################################
+echo '----> installing custom npm'
+cd $METEOR_BUILD_DIR/app/server/
+
+run_local_npm "install stripe"
+
+cd $BUILD_DIR
 
 ############################################
 # Prepare ENV vars
